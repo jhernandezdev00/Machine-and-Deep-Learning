@@ -1,0 +1,151 @@
+#### Universidad Autónoma de Aguascalientes
+#### Departamento: Ciencias de la Computación
+#### Carrera: Ingenieria en Computación Inteligente
+#### Curso: Machine Learning y Deep Learning
+#### Maestro: Dr. Francisco Javier Luna Rosas
+
+#### Alumno: Jorge Hernández
+#### Semestre: Enero - Junio del 2025
+
+
+## PRACTICA 5a. Curva ROC
+
+La curva ROC grafica la Tasa de verdaderos Positivos (Sensibilidad) en el eje 
+y contra la Tasa de Falsos Positivos (1 Especificidad) en el eje X, para diferentes umbrales de clasificación.
+
+1). Tasa de Verdaderos Positivos (TPR o Sensibilidad): Proporción de muestras positivas correctamente clasificadas. TPR=TP/TP+FN.
+2). Tasa de Falsos Positivos (FPR): Proporción de muestras negativas que fueron clasificadas erróneamente como positivas. FPR=FP / FP+TN.
+
+```{r}
+library(ROCR)
+pred <- prediction(
+  c(0.1, 0.5, 0.3, 0.8, 0.9, 0.4, 0.9, 0.5),
+  c(0, 0, 0, 1, 1, 1, 1, 1)
+)
+perf <- performance(pred, "tpr", "fpr")
+plot(perf, col = "red")
+segments(0, 0, 1, 1, col = "black")
+grid()
+```
+
+```{r}
+library(ROCR)
+plot_roc <- function(prediccion, real, adicionar = FALSE, color = "red") {
+  pred <- prediction(prediccion, real)
+  perf <- performance(pred, "tpr", "fpr")
+  plot(perf, col = color, add = adicionar, , main = "Curva ROC")
+  segments(0, 0, 1, 1, col = "#000000")
+  grid()
+}
+
+
+score <- c(0.9, 0.9,  0.8,  0.5,  0.5,  0.4,  0.3,  0.1)
+clase <- c(1, 1, 1, 0, 1, 1, 0, 0)
+plot_roc(score, clase)
+
+#### MISMO GRAFICO
+score2 <- c(0.8, 0.8,  0.7,  0.5,  0.4,  0.3,  0.2,  0.1)
+clase2 <- c(1, 1, 1, 0, 0, 1, 0, 0)
+plot_roc(score2, clase2, adicionar = TRUE, color = "blue")
+```
+
+## Interpretación del AUC-ROC
+### Un AUC alto (cercano a 1) significa que el modelo es bueno.
+### Un AUC de 0.8, por ejemplo, indica que hay un 80% de probabilidad de que el modelo asigne una mayor probabilidad a una muestra positiva que a una negativa.
+### Un AUC de 0.5 significa que el modelo no puede diferenciar entre clases.
+
+#### FUNCION PARA CALCULAR EL AREA BAJO LA CURVA
+
+```{r}
+pred <- prediction(score, clase)
+auc <- performance(pred, "auc")
+attributes(auc)$y.values[[1]]
+```
+
+```{r}
+area_roc <- function(prediccion, real) {
+  pred <- prediction(prediccion, real)
+  auc <- performance(pred, "auc")
+
+  attributes(auc)$y.values[[1]]
+}
+
+score <- c(0.9, 0.9,  0.8,  0.5,  0.5,  0.4,  0.3,  0.1)
+clase <- c(1, 1, 1, 0, 1, 1, 0, 0)
+plot_roc(score, clase)
+
+#### MISMO GRAFICO
+score2 <- c(0.8, 0.8,  0.7,  0.5,  0.4,  0.3,  0.2,  0.1)
+clase2 <- c(1, 1, 1, 0, 0, 1, 0, 0)
+
+area_roc(score, clase)
+area_roc(score2, clase2)
+```
+
+
+```{r}
+library(e1071)
+setwd("C:/Proyectos/Machine and Deep Learning/Data")
+datos <- read.csv("../Data/SpamData.csv", sep = ";", dec = ".", header = TRUE)
+muestra <- sample(1:4602, 1380)
+ttesting <- datos[muestra, ]
+taprendizaje <- datos[-muestra, ]
+modelo <- naiveBayes(Tipo ~ ., data = taprendizaje)
+prediccion <- predict(modelo, ttesting[, -58], type = "raw")
+```
+
+```{r}
+score <- prediccion[, 2]
+clase <- ttesting$Tipo
+
+plot_roc(score, clase)
+
+area_roc <- function(prediccion, real, adicionar = FALSE, color = "red") {
+  pred <- prediction(prediccion, real)
+  auc <- performance(pred, "auc")
+  attributes(auc)$y.values[[1]]
+}
+
+area_roc(score, clase)
+```
+
+#### ARBOLES DE DECISION
+
+```{r}
+library(rpart)
+library(rpart.plot)
+setwd("C:/Proyectos/Machine and Deep Learning/Data")
+datos <- read.csv("SpamData.csv", sep = ";", dec = ".", header = TRUE)
+muestra <- sample(1:4602, 1380)
+ttesting <- datos[muestra, ]
+taprendizaje <- datos[-muestra, ]
+modelo <- rpart(Tipo ~ ., data = taprendizaje)
+prediccion <- predict(modelo, ttesting, type = "prob")
+```
+
+```{r}
+score2 <- prediccion[, 2]
+clase2 <- ttesting$Tipo
+
+plot_roc(score, clase)
+plot_roc(score2, clase2, adicionar = TRUE, color = "blue")
+
+legend("bottomright",
+  legend = c("Naive bayes CURVA ROC", "Rpart CURVA ROC"),
+  col = c("blue", "red"), lty = 1, lwd = 1
+)
+
+area_roc(score, clase)
+area_roc(score2, clase2)
+```
+
+#### CONCLUSIONES
+
+La curva ROC grafica la Tasa de Verdaderos Positivos (Sensibilidad) en el eje Y contra la Tasa de Falsos Positivos (1 - Especificidad) en el eje X, para diferentes umbrales de clasificación.
+En esta ptractica implementamos 3 modelos para clasificar si un correo electronico tiene spam o no, los modelos utilizados fueron: Naive Bayes, Arboles de Decisión y Redes Neuronales.
+Se relizo un analisis comparativo de modelos, usando la Curva ROC, y se observo cual modelo genero mejor precisión.
+
+#### REFERENCIAS
+
+[1]John Chambers. (2008). Software for Data Analysis Programming with R. USA: Springer Verlag 2008.
+[2]Reporte Técnico de PROMIDAT: http://promidat.com/ (Ultimo acceso febrero 2025)
